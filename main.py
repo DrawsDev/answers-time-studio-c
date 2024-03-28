@@ -5,18 +5,24 @@ import random
 print("answers-time-studio-c-1-0-0")
 
 input_line = ""
-test = {
-    "title": "NewTest",
-    "questions": [
-        {"title": "question", 
-         "answers": {"right": ["a"], "wrong": ["b"]}, 
-         "duration": 60, 
-         "explain": "explain", 
-         "inputtable": False}
-    ]
-}
+test = None
 selq = 0
 
+def new_q(**params) -> dict:
+    return {
+        "title": params.get("title", "question"),
+        "answers": params.get("answers", {"right": ["y"], "wrong": ["n"]}),
+        "duration": params.get("duration", 60),
+        "explain": params.get("explain", "explain"),
+        "inputtable": params.get("inputtable", False)
+    }
+
+def new_test(**params) -> dict:
+    return {
+        "title": params.get("title", "NewTest"),
+        "questions": params.get("questions", [new_q()])
+    }
+test = new_test()
 
 def str2bool(value: str) -> bool:
     return value.lower() in ["yes", "y", "true", "t", "1"]
@@ -70,6 +76,8 @@ def handle_command(params: list) -> None:
 
                     global test
                     test = loaded_test
+            else:
+                print("file doesn't exists.")
 
         case "test.save":
             name = random.randint(0, 99999999)
@@ -99,6 +107,28 @@ def handle_command(params: list) -> None:
                     global selq
                     selq = int(params[1]) - 1
                     print("selected question #", selq + 1)
+
+        case "test.remq" if len(params) == 2:
+            if len(test["questions"]) <= 0: 
+                print("questions don't exists.")
+                return
+            if params[1].isdigit():
+                if 0 <= int(params[1]) - 1 <= len(test["questions"]) - 1:
+                    test["questions"].pop(int(params[1]) - 1)
+                    print("question #", int(params[1]), "has been removed.")
+
+        case "test.newq":
+            print("new question added")
+            test["questions"].append(new_q())
+
+        case "test.tree":
+            test_tree()
+        
+        case "test.new":
+            print("create a new test? (the current one won't be saved)")
+            if str2bool(input("[y/n] >> ")): 
+                print("new test created.")
+                test = new_test()
 
         case "q.title" if len(params) >= 2:
             if len(test["questions"]) <= 0: 
@@ -165,10 +195,15 @@ def handle_command(params: list) -> None:
                 print(f"{i}")
         
         case "q.rema" if len(params) == 2:
+            if len(test["questions"]) <= 0: 
+                print("questions don't exists.")
+                return
+            
             answers = test["questions"][selq]["answers"]
             right = answers["right"]
             wrong = answers["wrong"]
             right_wrong = right + wrong
+
             if params[1].isdigit():
                 index = int(params[1]) - 1
                 if 0 <= index <= len(right_wrong) - 1:
@@ -178,23 +213,13 @@ def handle_command(params: list) -> None:
                     elif needrem in wrong:
                         wrong.remove(needrem)
                     print(f"answer ' {needrem} ' has been removed")
-        
-        case "test.newq":
-            test["questions"].append({
-                "title": "question",
-                "answers": {"right": ["a"], "wrong": ["b"]},
-                "duration": 60,
-                "explain": "explain",
-                "inputtable": False                
-            })
-            print("new question added")
-        
+
         case "q.newa" if len(params) >= 3:
             if len(test["questions"]) <= 0: 
                 print("questions don't exists.")
                 return
             if len(test["questions"][selq]["answers"]["right"] + test["questions"][selq]["answers"]["wrong"]) == 4:
-                print("too many answers")
+                print("too many answers.")
                 return
             test["questions"][selq]["answers"]["right" if str2bool(params[1]) else "wrong"].append(" ".join(params[2:]))
             print("new answer added")
@@ -202,10 +227,7 @@ def handle_command(params: list) -> None:
         case "q.tree":
             q_tree(selq)
         
-        case "test.tree":
-            test_tree()
-        
 while input_line != "end":
-    input_line = input(" >> ")
+    input_line = input("\n >> ")
 
     handle_command(input_line.split(" "))
