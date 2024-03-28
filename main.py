@@ -17,6 +17,7 @@ test = {
 }
 selq = 0
 
+
 def str2bool(value: str) -> bool:
     return value.lower() in ["yes", "y", "true", "t", "1"]
 
