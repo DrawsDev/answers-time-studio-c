@@ -6,7 +6,7 @@ print("answers-time-studio-c-1-0-0")
 
 input_line = ""
 test = None
-selq = 0
+selq = 0 
 
 def new_q(**params) -> dict:
     return {
