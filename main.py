@@ -23,7 +23,8 @@ CMDLIST = ("help [..]  -  Print the commands.",
            "q.expl [explain <str|..>]  -  Set (or print) the question explain.",
            "q.as [..]  -  Print the question answers.",
            "q.rema [index <int>]  -  Remove the selected question answer.",
-           "q.newa [correct_incorrect <bool>] [answer <str>]  -  Create a new answer for question.",
+           "q.newa [correct <bool>] [answer <str>]  -  Create a new answer for question.",
+           "q.repa [index <int>] [correct <bool>] [text <str>]  -  Overwrite the selected answer.",
            "q.tree [..]  -  Print the question tree, i.e. title and answers.")
 
 print(VER)
@@ -44,7 +45,21 @@ def no_questions() -> bool:
 
 
 def in_range_questions(index) -> bool:
-    return (test is not None and 0 <= index <= len(test.get("questions", [])) - 1)
+    return in_range(index, 0, len(test.get("questions", [])) - 1)
+
+
+def in_range(index: int, min_index: int, max_index: int) -> bool:
+    result = min_index <= index <= max_index
+    if not result: print("error: index out of range.")
+    return result
+
+
+def get_answers() -> tuple[list, list]:
+    """Return a right and wrong answers"""
+    answers = test["questions"][selq]["answers"]
+    right = answers["right"]
+    wrong = answers["wrong"]
+    return right, wrong
 
 
 def load_test_file(filename: str | list[str]) -> dict:
@@ -109,7 +124,30 @@ def output_question_tree(index: int) -> None:
         for i in wrong: print(f"- {i}")
 
 
+def remove_answer(index: int) -> None:
+    if no_questions(): return
+    right, wrong = get_answers()
+    merge = right + wrong
+    if in_range(index, 0, len(merge) - 1):
+        target = merge[index]
+        if target in right: right.remove(target)
+        elif target in wrong: wrong.remove(target)
+        print(f"answer {target!r} has been removed.")
+
+
+def append_answer(correct: bool, text: str) -> None:
+    if no_questions(): return
+    right, wrong = get_answers()
+
+    if len(right + wrong) >= 4:
+        return print("error: number of answers out of range (> 4).")
+    
+    right.append(text) if correct else wrong.append(text)    
+    print("new answer added.")
+
+
 def handle_command(params: list) -> None:
+    global test
     match params[0]:
         case "dev":
             print("yes")
@@ -117,22 +155,25 @@ def handle_command(params: list) -> None:
         case "help":
             for cmd in CMDLIST: print(cmd)
 
+        case "test.new":
+            print("create a new test? (the current one won't be saved)")
+            if str2bool(input("[y/n] >> ")):
+                test = new_test()
+                print("new test created.")
+
         case "test.load" if len(params) >= 2:
             source = load_test_file(params[1:])
 
             if source == {}:
                 return print("file doesn't exists.")
 
-            loaded_test = new_test(**{"title": source.get("title")})
+            test = new_test(**{"title": source.get("title")})
 
             for q in source.get("questions", {}):
-                loaded_test["questions"].append(new_q(**{
+                test["questions"].append(new_q(**{
                     "title": q.get("title"), "answers": q.get("answers"),
                     "duration": q.get("duration"), "explain": q.get("explain"),
                     "inputtable": q.get("inputtable")}))
-
-            global test
-            test = loaded_test
 
         case "test.save":
             filename = save_test_file()
@@ -178,12 +219,6 @@ def handle_command(params: list) -> None:
 
         case "test.tree":
             output_test_tree()
-        
-        case "test.new":
-            print("create a new test? (the current one won't be saved)")
-            if str2bool(input("[y/n] >> ")): 
-                test = new_test()
-                print("new test created.")
 
         case "q.title" if len(params) >= 2:
             if no_questions(): return
@@ -229,34 +264,26 @@ def handle_command(params: list) -> None:
             print(test["questions"][selq]["explain"])
 
         case "q.as":
-            answers = test["questions"][selq]["answers"]
-            for i in answers["right"]: print(f"{i} (right)")
-            for i in answers["wrong"]: print(f"{i}")
+            if no_questions(): return
+            right, wrong = get_answers()
+            for i in right: print(f"{i} (right)")
+            for i in wrong: print(f"{i}")
         
         case "q.rema" if len(params) == 2:
-            if no_questions(): return
+            index = int(params[1]) - 1 if params[1].isdigit() else -1
+            remove_answer(index)
             
-            answers = test["questions"][selq]["answers"]
-            right = answers["right"]
-            wrong = answers["wrong"]
-            right_wrong = right + wrong
-
-            if params[1].isdigit():
-                index = int(params[1]) - 1
-                if 0 <= index <= len(right_wrong) - 1:
-                    needrem = right_wrong[index]
-                    if needrem in right:
-                        right.remove(needrem)
-                    elif needrem in wrong:
-                        wrong.remove(needrem)
-                    print(f"answer {needrem!r} has been removed.")
-
         case "q.newa" if len(params) >= 3:
-            if no_questions(): return
-            if len(test["questions"][selq]["answers"]["right"] + test["questions"][selq]["answers"]["wrong"]) == 4:
-                return print("error: number of answers out of range (> 4).")
-            test["questions"][selq]["answers"]["right" if str2bool(params[1]) else "wrong"].append(" ".join(params[2:]))
-            print("new answer added.")
+            correct = str2bool(params[1])
+            text = " ".join(params[2:])
+            append_answer(correct, text)
+        
+        case "q.repa" if len(params) >= 4:
+            index = int(params[1]) - 1 if params[1].isdigit() else -1
+            correct = str2bool(params[2])
+            text = " ".join(params[3:])
+            remove_answer(index)
+            append_answer(correct, text)
 
         case "q.tree":
             output_question_tree(selq)
