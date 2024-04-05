@@ -11,5 +11,5 @@
 ##
 
 <p align="center">
-  <img src="https://github.com/DrawsDev/answers-time/assets/98094911/28dd622e-334e-4932-95f9-e0d35f5ed25a" height="100">
+  <img src="https://github.com/DrawsDev/answers-time-studio-c/assets/98094911/47177dd8-f4ad-45b9-a90f-b5418f29e362" height="100">
 </p>
